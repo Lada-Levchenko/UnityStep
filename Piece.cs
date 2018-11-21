@@ -111,9 +111,24 @@ public class Piece : MonoBehaviour
                         return true;
                 }
             }
+
         }
-
-
+        if (isKing){
+            int deltaMoveX = x1 - x2;
+            int step = 1;
+            if(deltaMoveX < 0){
+                changeSign = -1;
+            }
+            Piece[] pieces = [];
+            for(int i = x1, int j = y1; i*step < x2*step, j*step < y2*step; i+=step, j+=step){
+                Piece p = board[i, j];
+                if (p != null){
+                    pieces.Add(p);
+                }
+            }
+            if (pieces.Length == 1 and pieces[0].isWhite != isWhite)
+                return true;
+        }
         return false;
     }
 
