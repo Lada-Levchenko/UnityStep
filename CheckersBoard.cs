@@ -1,122 +1,323 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Piece : MonoBehaviour
+public class CheckersBoard : MonoBehaviour
 {
+    public Piece[,] pieces = new Piece[8, 8];
+    public GameObject whitePiecePrefab;
+    public GameObject blacPicePrefab;
+
+    private Vector3 boardoffset = new Vector3(-4.0f, 0, -4.0f);
+    private Vector3 pieceoffset = new Vector3(0.5f, 0, 0.5f);
 
     public bool isWhite;
-    public bool isKing;
+    private bool isWhiteTurn;
+    private bool hasKilled;
 
-    public bool IsForceToMove(Piece[,] board, int x, int y) 
+    private Piece selectedPiece;
+    private List<Piece> forcedPieces;
+
+    private Vector2 mouseOver;
+    private Vector2 startDrag;
+    private Vector2 endDrag;
+
+    private void Start()
     {
-        if (isWhite || isKing)
-        {
-            // Top left
-            if (x >= 2 && y <= 5)
-            {
-                Piece p = board[x - 1, y + 1];
-                // If there is a piece, and it is not the same color as ours
-                if (p != null && p.isWhite != isWhite)
-                {
-                    // Check if its possible to land after the jump
-                    if (board[x - 2, y + 2] == null)
-                        return true;
-                }
-            }
-            // Top right
-            if (x >= 5 && y <= 5)
-            {
-                Piece p = board[x + 1, y + 1];
-                // If there is a piece, and it is not the same color as ours
-                if (p != null && p.isWhite != isWhite)
-                {
-                    // Check if its possible to land after the jump
-                    if (board[x + 2, y + 2] == null)
-                        return true;
-                }
-            }
-        }
-        
-
-        if(!isWhite || isKing)
-        {
-            // Bot left
-            if (x >= 2 && y >= 2)
-            {
-                Piece p = board[x - 1, y - 1];
-                // If there is a piece, and it is not the same color as ours
-                if (p != null && p.isWhite != isWhite)
-                {
-                    // Check if its possible to land after the jump
-                    if (board[x - 2, y - 2] == null)
-                        return true;
-                }
-            }
-            // Bot right
-            if (x >= 5 && y >= 2)
-            {
-                Piece p = board[x + 1, y - 1];
-                // If there is a piece, and it is not the same color as ours
-                if (p != null && p.isWhite != isWhite)
-                {
-                    // Check if its possible to land after the jump
-                    if (board[x + 2, y - 2] == null)
-                        return true;
-                }
-            }
-        }
-
-        return false;
+        //isWhite = true;
+        isWhiteTurn = true;
+        forcedPieces = new List<Piece>();
+        GenerateBoard();
     }
-    public bool ValidMove(Piece[,] board, int x1, int y1, int x2, int y2)
+    private void Update()
     {
-        // If you are moving on top or anothep piece
-        if (board[x2, y2] != null)
-            return false;
+        UpdateMouseOver();
 
-        int deltaMove = Mathf.Abs(x1 - x2);
-        int deltaMoveY = y2 - y1;
-        if (isWhite || isKing)
+        //if it's my turn
+        if ((isWhite) ? isWhiteTurn : !isWhiteTurn)
         {
-            if (deltaMove == 1)
+            int x = (int)mouseOver.x;
+            int y = (int)mouseOver.y;
+
+            if (selectedPiece != null)
+                UpdatePieceDrag(selectedPiece);
+
+            if (Input.GetMouseButtonDown(0))
             {
-                if (deltaMoveY == 1)
-                    return true;
+                SelectedPiece(x, y);
+                //Debug.Log("X = " + x + " Y = " + y);
             }
-            else if (deltaMove == 2)
+
+            if (Input.GetMouseButtonUp(0))
+                TryMove((int)startDrag.x, (int)startDrag.y, x, y);
+        }
+    }
+    private void UpdateMouseOver()
+    {
+        //if its my turn
+        if (!Camera.main)
+        {
+            Debug.Log("Unable to find main camera");
+            return;
+        }
+
+        RaycastHit hit;
+        if (Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition), out hit, 25.0f, LayerMask.GetMask("Board")))
+        {
+            mouseOver.x = (int)(hit.point.x - boardoffset.x);
+            mouseOver.y = (int)(hit.point.z - boardoffset.z);
+        }
+        else
+        {
+            mouseOver.x = -1;
+            mouseOver.y = -1;
+        }
+        //Debug.Log("UpdateMouseOver" + " " + "mouseOver.x" + " " + mouseOver.x + " mouseOver.y" + mouseOver.y);
+    }
+    private void UpdatePieceDrag(Piece p)
+    {
+        if (!Camera.main)
+        {
+            Debug.Log("Unable to find main camera");
+            return;
+        }
+
+        RaycastHit hit;
+        if (Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition), out hit, 25.0f, LayerMask.GetMask("Board")))
+        {
+            p.transform.position = hit.point + Vector3.up;
+        }
+
+    }
+    private void SelectedPiece(int x, int y)
+    {
+        //Out if bounds
+        if (x < 0 || x >= 8 || y < 0 || y >= 8)
+        {
+            Debug.Log("NULL0");
+            return;
+        }
+
+        Piece p = pieces[x, y];
+        //Debug.Log(x + " + " + y);
+        if (p != null && p.isWhite == isWhite)
+        {
+            if (forcedPieces.Count == 0)
             {
-                if (deltaMoveY == 2)
+                selectedPiece = p;
+                startDrag = mouseOver;
+                Debug.Log("NULL1");
+            }
+            else
+            {
+                // Look for the piece under out forced pieces list
+                if (forcedPieces.Find(fp => fp == p) == null)
                 {
-                    Piece p = board[(x1 + x2) / 2, (y1 + y2) / 2];
-                    if (p != null && p.isWhite != isWhite)
-                        return true;
+                    Debug.Log("NULL2");
+                    return;
                 }
+
+                selectedPiece = p;
+                startDrag = mouseOver;
+            }
+            Debug.Log(selectedPiece.name);
+        }
+    }
+    public void TryMove(int x1, int y1, int x2, int y2)
+    {
+        forcedPieces = ScanForPossibleMove();
+
+        // Multiplayer Support
+        startDrag = new Vector2(x1, y1);
+        endDrag = new Vector2(x2, y2);
+        selectedPiece = pieces[x1, y1];
+
+        // Out of bounds
+        if (x2 < 0 || x2 >= 8 || y2 < 0 || y2 >= 8)
+        {
+            if (selectedPiece != null)
+                MovePiece(selectedPiece, x1, y1);
+
+            startDrag = Vector2.zero;
+            selectedPiece = null;
+            return;
+        }
+
+        if (selectedPiece != null)
+        {
+            // If it hasn't moved
+            if (endDrag == startDrag)
+            {
+                MovePiece(selectedPiece, x1, y1);
+                startDrag = Vector2.zero;
+                selectedPiece = null;
+                return;
+            }
+
+            //Check if it's a valid move 
+            if (selectedPiece.ValidMove(pieces, x1, y1, x2, y2))
+            {
+                // Did we kill anything
+                // If this a jump 
+                if (Mathf.Abs(x2 - x1) == 2)
+                {
+                    Piece p = pieces[(x1 + x2) / 2, (y1 + y2) / 2];
+                    if (p != null)
+                    {
+                        pieces[(x1 + x2) / 2, (y1 + y2) / 2] = null;
+                        DestroyImmediate(p.gameObject);
+                        hasKilled = true;
+                    }
+                }
+
+                // Were we suposed to kill anything?
+                if (forcedPieces.Count != 0 && !hasKilled)
+                {
+                    MovePiece(selectedPiece, x1, y1);
+                    startDrag = Vector2.zero;
+                    selectedPiece = null;
+                    return;
+                }
+
+                pieces[x2, y2] = selectedPiece;
+                pieces[x1, y1] = null;
+                MovePiece(selectedPiece, x2, y2);
+
+                EndTurn();
+            }
+            else
+            {
+                MovePiece(selectedPiece, x1, y1);
+                startDrag = Vector2.zero;
+                selectedPiece = null;
+                return;
+            }
+        }
+        // MovePiece(selectedPiece, x2, y2);
+        // Check if we are out of bounds
+        // If there are selected Piece
+    }
+    private void EndTurn()
+    {
+        int x = (int)endDrag.x;
+        int y = (int)endDrag.y;
+
+        // Promotions
+        if (selectedPiece != null)
+        {
+            if (selectedPiece.isWhite && !selectedPiece.isKing && y == 7)
+            {
+                selectedPiece.isKing = true;
+                selectedPiece.transform.Rotate(Vector3.right * 180);
+            }
+            else if (!selectedPiece.isWhite && !selectedPiece.isKing && y == 0)
+            {
+                selectedPiece.isKing = true;
+                selectedPiece.transform.Rotate(Vector3.right * 180);
             }
         }
 
-        if (!isWhite || isKing)
+        selectedPiece = null;
+        startDrag = Vector2.zero;
+
+        if (ScanForPossibleMove(selectedPiece, x, y).Count != 0 && hasKilled)
+            return;
+
+        isWhiteTurn = !isWhiteTurn;
+        isWhite = !isWhite;
+        hasKilled = false;
+        CheckVictory();
+    }
+    private void CheckVictory()
+    {
+        var ps = FindObjectsOfType<Piece>();
+        bool hasWhite = false, hasBlack = false;
+        for (int i = 0; i < ps.Length; i++)
         {
-            if (deltaMove == 1)
+            if (ps[i].isWhite)
+                hasWhite = true;
+            else
+                hasBlack = true;
+        }
+
+        if (!hasWhite)
+            Victory(false);
+        if (!hasBlack)
+            Victory(true);
+    }
+    private void Victory(bool isWhite)
+    {
+        if (isWhite)
+            FindObjectOfType<UIManager>().GameOver(isWhite);
+        else
+            FindObjectOfType<UIManager>().GameOver(isWhite);
+    }
+    private List<Piece> ScanForPossibleMove(Piece p, int x, int y)
+    {
+        forcedPieces = new List<Piece>();
+
+        if (pieces[x, y].IsForceToMove(pieces, x, y))
+            forcedPieces.Add(pieces[x, y]);
+
+        return forcedPieces;
+    }
+    private List<Piece> ScanForPossibleMove()
+    {
+        forcedPieces = new List<Piece>();
+
+        // Check all the pieces
+        for (int i = 0; i < 8; i++)
+            for (int j = 0; j < 8; j++)
+                if (pieces[i, j] != null && pieces[i, j].isWhite == isWhiteTurn)
+                    if (pieces[i, j].IsForceToMove(pieces, i, j))
+                        forcedPieces.Add(pieces[i, j]);
+
+
+        return forcedPieces;
+    }
+    private void GenerateBoard()
+    {
+        //Generate White Team
+        for (int y = 0; y < 3; y++)
+        {
+            bool addRow = (y % 2 == 0);
+            for (int x = 0; x < 8; x += 2)
             {
-                if (deltaMoveY == -1)
-                    return true;
-            }
-            else if (deltaMove == 2)
-            {
-                if (deltaMoveY == -2)
-                {
-                    Piece p = board[(x1 + x2) / 2, (y1 + y2) / 2];
-                    if (p != null && p.isWhite != isWhite)
-                        return true;
-                }
+                //Generate our price
+                GeneratePrice((addRow) ? x : x + 1, y);
             }
         }
 
-
-        return false;
+        //Generate Black Team
+        for (int y = 7; y > 4; y--)
+        {
+            bool addRow = (y % 2 == 0);
+            for (int x = 0; x < 8; x += 2)
+            {
+                //Generate our price
+                GeneratePrice((addRow) ? x : x + 1, y);
+            }
+        }
+    }
+    private void GeneratePrice(int x, int y)
+    {
+        bool isPieceWhite = (y > 3) ? false : true;
+        GameObject go = Instantiate((isPieceWhite) ? whitePiecePrefab : blacPicePrefab) as GameObject;
+        go.transform.SetParent(transform);
+        Piece p = go.GetComponent<Piece>();
+        pieces[x, y] = p;
+        MovePieceSilens(p, x, y);
+    }
+    private void MovePiece(Piece p, int x, int y)
+    {
+        p.transform.position = (Vector3.right * x) + (Vector3.forward * y) + boardoffset + pieceoffset;
+        FindObjectOfType<AudioManager>().PlayAudioSound();
     }
 
+    private void MovePieceSilens(Piece p, int x, int y)
+    {
+        p.transform.position = (Vector3.right * x) + (Vector3.forward * y) + boardoffset + pieceoffset;
+    }
 
-    //https://www.youtube.com/watch?v=iR1rG8Fo6X0&list=PLLH3mUGkfFCVXrGLRxfhst7pffE9o2SQO&index=6
 }
+
