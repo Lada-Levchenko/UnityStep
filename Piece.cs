@@ -116,20 +116,20 @@ public class Piece : MonoBehaviour
         if (isKing)
         {
             int deltaMoveX = x1 - x2;
-            int step = 1;
+            int stepX, stepY = 1;
             if (deltaMoveX < 0)
-            {
-                step = -1;
-            }
+                stepX = -1;
+            if (deltaMoveY < 0)
+                stepY = -1;
             List<Piece> pieces = new List<Piece>();
-            for (int i = x1, j = y1; i* step<x2*step && j* step<y2*step; i += step, j += step){
+            for (int i = x1, j = y1; i*stepX<x2*stepX && j* stepY<y2*stepY; i += stepX, j += stepY){
                 Piece p = board[i, j];
                 if (p != null)
                 {
                     pieces.Add(p);
                 }
             }
-            if (pieces.Count == 1 && pieces[0].isWhite != isWhite)
+            if (pieces.Count == 0 || (pieces.Count == 1 && pieces[0].isWhite != isWhite))
                 return true;
         }
         return false;
