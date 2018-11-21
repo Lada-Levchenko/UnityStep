@@ -1,12 +1,14 @@
+﻿using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
-using System.Collections;
 
 public class Piece : MonoBehaviour
 {
+
     public bool isWhite;
     public bool isKing;
 
-    public bool IsForceToMove(Piece[,] board,int x,int y)
+    public bool IsForceToMove(Piece[,] board, int x, int y) 
     {
         if (isWhite || isKing)
         {
@@ -22,8 +24,7 @@ public class Piece : MonoBehaviour
                         return true;
                 }
             }
-
-            // Top Right
+            // Top right
             if (x <= 5 && y <= 5)
             {
                 Piece p = board[x + 1, y + 1];
@@ -36,9 +37,10 @@ public class Piece : MonoBehaviour
                 }
             }
         }
+        
 
         if(!isWhite || isKing)
-        {            
+        {
             // Bot left
             if (x >= 2 && y >= 2)
             {
@@ -51,8 +53,7 @@ public class Piece : MonoBehaviour
                         return true;
                 }
             }
-
-            // Bot Right
+            // Bot right
             if (x <= 5 && y >= 2)
             {
                 Piece p = board[x + 1, y - 1];
@@ -70,13 +71,12 @@ public class Piece : MonoBehaviour
     }
     public bool ValidMove(Piece[,] board, int x1, int y1, int x2, int y2)
     {
-        // If you are moving on top of another piece
+        // If you are moving on top or anothep piece
         if (board[x2, y2] != null)
             return false;
 
         int deltaMove = Mathf.Abs(x1 - x2);
         int deltaMoveY = y2 - y1;
-
         if (isWhite || isKing)
         {
             if (deltaMove == 1)
@@ -113,6 +113,10 @@ public class Piece : MonoBehaviour
             }
         }
 
+
         return false;
     }
+
+
+    //https://www.youtube.com/watch?v=iR1rG8Fo6X0&list=PLLH3mUGkfFCVXrGLRxfhst7pffE9o2SQO&index=6
 }
